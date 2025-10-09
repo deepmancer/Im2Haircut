@@ -38,10 +38,10 @@ chmod +x ./install.sh
 1. **Launch the demo:**
 
 ```bash
-bash scripts/static.sh
+bash ./scripts/static.sh
 ```
 
-2. Find results in the folder: ```bash ./exps_inverse_stage/try/examples/{IMG_NAME}```
+2. Find results in the folder: ```./exps_inverse_stage/try/examples/{IMG_NAME}```
 
 
 3. Visualize results using tensorbard:
@@ -63,7 +63,7 @@ chmod +x ./install_submodules.sh
 
 Then follow these steps:
 
-1. Place your input images in ```bash./data/new_data/img```
+1. Place your input images in ```./data/new_data/img```
 
 2. Compute preprocessing data (masks, orientation maps, depth maps, and cameras):
 ```bash
@@ -72,7 +72,7 @@ bash ./scripts/preprocess_any_data.sh
 
 3) Run the main inference:
 ```bash
-bash scripts/static.sh
+bash ./scripts/static.sh
 ```
 
 
