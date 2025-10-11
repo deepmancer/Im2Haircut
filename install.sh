@@ -1,5 +1,5 @@
 # Prerequisites:
-#
+
 # 1. Install CUDA 11.8
 #    Follow intructions on https://developer.nvidia.com/cuda-11-8-0-download-archive
 #    Make sure that
@@ -8,10 +8,10 @@
 #    If needed, restart bash environment
 
 #    The environment was tested only with this CUDA version
-#
-# export CUDA_HOME=/is/software/nvidia/cuda-11.8
-# export LD_LIBRARY_PATH=/is/software/nvidia/cuda-11.8/lib64
-# export PATH=$PATH:/is/software/nvidia/cuda-11.8/bin
+
+export CUDA_HOME=/is/software/nvidia/cuda-11.8
+export LD_LIBRARY_PATH=/is/software/nvidia/cuda-11.8/lib64
+export PATH=$PATH:/is/software/nvidia/cuda-11.8/bin
 
 # Check common paths for cuda
 if command -v nvcc &> /dev/null; then
@@ -54,10 +54,10 @@ conda create -y -n matte_anything \
     -c pytorch -c nvidia -c conda-forge # this worked better than the official installation config
     
 
-# Download Im2Haircut files:
-gdown https://drive.google.com/uc?id=1788vcfmdXIJKePOmBYVjC1Ts8IgeZb-_
-tar -xzvf data.tar.gz
+# # Download Im2Haircut files:
+# gdown https://drive.google.com/uc?id=1788vcfmdXIJKePOmBYVjC1Ts8IgeZb-_
+# tar -xzvf data.tar.gz
 
-# Download Im2Haircut checkpoints:
-gdown https://drive.google.com/uc?id=1uOuJx8kO22IZS3WTOeA5IQMw4cHXyamg
-tar -xzvf pretrained_models.tar.gz
+# # Download Im2Haircut checkpoints:
+# gdown https://drive.google.com/uc?id=1uOuJx8kO22IZS3WTOeA5IQMw4cHXyamg
+# tar -xzvf pretrained_models.tar.gz
