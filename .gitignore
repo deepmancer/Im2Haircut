@@ -277,3 +277,4 @@ data/examples/strand_map_aligned/dfe639464887c0b69c55e6b586435625.png
 pretrained_models/coarse.pth
 pretrained_models/fine.pth
 pretrained_models/neus.pth
+exps_inverse_stage/try/examples/*

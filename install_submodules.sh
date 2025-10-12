@@ -8,13 +8,6 @@ PROJECT_DIR=$PWD
 
 cd $PROJECT_DIR && cd ./submodules/external/HairStep
 
-conda env create -f environment.yml
-conda activate hairstep
-
-pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 -f https://download.pytorch.org/whl/torch_stable.html
-
-pip install -r requirements.txt
-
 cd external/3DDFA_V2
 sh ./build.sh
 cd ../../
@@ -36,8 +29,7 @@ conda activate ml-depth-pro
 
 pip install -e .
 
-source get_pretrained_models.sh 
-
+source get_pretrained_models.sh
 
 # # 3) Install Deep3DFaceRecon_pytorch following https://github.com/sicxu/Deep3DFaceRecon_pytorch:
 cd $PROJECT_DIR && cd ./submodules/external/Deep3DFaceRecon_pytorch
