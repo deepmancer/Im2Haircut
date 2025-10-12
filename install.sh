@@ -29,16 +29,16 @@ conda activate clip
 
 # Save parent dir
 # PROJECT_DIR=$PWD
-GAUSSIAN_HAIRCUT_PATH="submodules/external/GaussianHaircut/ext"
+GAUSSIAN_HAIRCUT_PATH="submodules/external/GaussianHaircut"
 cd $GAUSSIAN_HAIRCUT_PATH
 
 bash install.sh
 cd $PROJECT_DIR
 
-# Download Im2Haircut files:
-gdown https://drive.google.com/uc?id=1788vcfmdXIJKePOmBYVjC1Ts8IgeZb-_
-tar -xzvf data.tar.gz
+# # Download Im2Haircut files:
+# gdown https://drive.google.com/uc?id=1788vcfmdXIJKePOmBYVjC1Ts8IgeZb-_
+# tar -xzvf data.tar.gz
 
-# Download Im2Haircut checkpoints:
-gdown https://drive.google.com/uc?id=1uOuJx8kO22IZS3WTOeA5IQMw4cHXyamg
-tar -xzvf pretrained_models.tar.gz
+# # Download Im2Haircut checkpoints:
+# gdown https://drive.google.com/uc?id=1uOuJx8kO22IZS3WTOeA5IQMw4cHXyamg
+# tar -xzvf pretrained_models.tar.gz

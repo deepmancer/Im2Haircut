@@ -1,17 +1,8 @@
 #!/bin/bash
 
-# export CUDA_HOME=/is/software/nvidia/cuda-11.8
-# export LD_LIBRARY_PATH=/is/software/nvidia/cuda-11.8/lib64
-# export PATH=$PATH:/is/software/nvidia/cuda-11.8/bin
-
-if command -v nvcc &> /dev/null; then
-    CUDA_HOME=$(dirname $(dirname $(which nvcc)))
-elif [ -d "/is/software/nvidia/cuda-11.8" ]; then
-    CUDA_HOME=/is/software/nvidia/cuda-11.8
-else
-    echo "CUDA not found! Please install or add nvcc to PATH."
-    return 1  # works if sourced
-fi
+export CUDA_HOME=/usr/local/cuda
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64
+export PATH=$PATH:/usr/local/cuda/bin
 
 export CUDA_HOME
 export PATH=$CUDA_HOME/bin:$PATH
@@ -24,24 +15,8 @@ echo "LD_LIBRARY_PATH detected at: $LD_LIBRARY_PATH"
 export GPU="0"
 export CUDA_VISIBLE_DEVICES=$GPU
 
-
-# Activate conda environment
-if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
-    source "$HOME/miniconda3/etc/profile.d/conda.sh"
-    PYTHON_ENV="$HOME/miniconda3/bin/activate"
-    source "$PYTHON_ENV"
-    
-elif [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
-    source "$HOME/anaconda3/etc/profile.d/conda.sh"
-    PYTHON_ENV="$HOME/anaconda3/bin/activate"
-    source "$PYTHON_ENV"
-    
-else
-    echo "Conda not found in standard locations!"
-fi
-
-
-conda activate im2haircut 
+source ~/anaconda3/bin/activate
+conda activate clip
 
 PORT=$((1000 + RANDOM % 5001))
 
@@ -49,7 +24,7 @@ echo "Starting training ..."
 echo ""
 
 export PYTHONPATH=./submodules/external/VOODOO3D-official:$PYTHONPATH
-export PYTHONPATH=./submodules/external/GaussianHaircut:$PYTHONPATH
+export PYTHONPATH=/localhome/aha220/Hairdar/modules/GaussianHaircut
 
 conf_path="static.conf"
 exp_name="try"
