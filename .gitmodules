@@ -1,6 +1,3 @@
-[submodule "submodules/external/GaussianHaircut"]
-	path = submodules/external/GaussianHaircut
-	url = https://github.com/eth-ait/GaussianHaircut.git
 [submodule "submodules/external/HairStep"]
 	path = submodules/external/HairStep
 	url = https://github.com/GAP-LAB-CUHK-SZ/HairStep
