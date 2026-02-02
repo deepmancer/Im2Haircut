@@ -23,15 +23,35 @@ conn = None
 addr = None
 
 listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+_initialized = False
 
 def init(wish_host, wish_port):
-    global host, port, listener
+    global host, port, listener, _initialized
+    
+    # If already initialized, cleanup first
+    if _initialized:
+        cleanup()
+    
     host = wish_host
     port = wish_port
+    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     listener.bind((host, port))
     listener.listen()
     listener.settimeout(0)
+    _initialized = True
+
+def cleanup():
+    global listener, conn, _initialized
+    try:
+        if conn is not None:
+            conn.close()
+        if listener is not None:
+            listener.close()
+    except:
+        pass
+    conn = None
+    _initialized = False
 
 def try_connect():
     global conn, addr, listener

@@ -20,7 +20,7 @@ import torch
 import torch.nn.functional as F
 
 from src.loss_utils.losses import or_loss_directed
-from src.gaussian_utils.gaussian_renderer import render, render_hair, network_gui
+from src.gaussian_utils.gaussian_renderer import render, render_hair
 from src.gaussian_utils.scene.gaussian_model import GaussianModel
 from src.gaussian_utils.scene.gaussian_model_strands import GaussianModelCurves
 from src.gaussian_utils.scene.cameras import CameraMini
@@ -144,20 +144,20 @@ class GaussianTrainer(nn.Module):
         self.background = torch.tensor(bg_color, dtype=torch.float32, device=device)
         
         # Start GUI server, configure and run training
-        network_gui.init(ip, port)
+        # network_gui.init(ip, port)
         
-        if network_gui.conn == None:
-            network_gui.try_connect()
-        while network_gui.conn != None:
-            try:
-                net_image_bytes = None
-                custom_cam, do_training, self.pipe.convert_SHs_python, self.pipe.compute_cov3D_python, keep_alive, scaling_modifer = network_gui.receive()
-                if custom_cam != None:
-                    net_image = render_hair(custom_cam, self.gaussians, self.gaussians_hair, self.pipe, self.background, self.scaling_modifer)["render"]
-                    net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
-                network_gui.send(net_image_bytes, self.dataset.source_path)
-            except Exception as e:
-                network_gui.conn = None
+        # if network_gui.conn == None:
+        #     network_gui.try_connect()
+        # while network_gui.conn != None:
+        #     try:
+        #         net_image_bytes = None
+        #         custom_cam, do_training, self.pipe.convert_SHs_python, self.pipe.compute_cov3D_python, keep_alive, scaling_modifer = network_gui.receive()
+        #         if custom_cam != None:
+        #             net_image = render_hair(custom_cam, self.gaussians, self.gaussians_hair, self.pipe, self.background, self.scaling_modifer)["render"]
+        #             net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
+        #         network_gui.send(net_image_bytes, self.dataset.source_path)
+        #     except Exception as e:
+        #         network_gui.conn = None
 
                 
     def render(self, cam_sample, selected_strands, scaling_factor, sample_flip, resolution, gt_mask, appearance=None):

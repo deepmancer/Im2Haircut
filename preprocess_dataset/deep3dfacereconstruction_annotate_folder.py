@@ -18,7 +18,7 @@ import glob
 from pytorch3d.io import load_objs_as_meshes, save_obj, load_obj
 
 import argparse
-sys.path.append("./submodules/external/Deep3DFaceRecon_pytorch")
+sys.path.insert(0, "./submodules/external/Deep3DFaceRecon_pytorch")
 from options.test_options import TestOptions
 from util.visualizer import MyVisualizer
 from util.preprocess import align_img
@@ -30,7 +30,7 @@ import PIL
 
 
 class Deep3DFaceReconstruction_Processor:
-    def __init__(self, device, model_name="./submodules/external/Deep3DFaceRecon_pytorch/", epoch=20):
+    def __init__(self, device, model_name="/localhome/aha220/HairProjects/Im2Haircut/submodules/external/Deep3DFaceRecon_pytorch", epoch=20):
         
         bfm_folder = os.path.join(model_name, "BFM")
         ckpts_dir = os.path.join(model_name, "checkpoints/pretrained")
@@ -90,7 +90,11 @@ class Deep3DFaceReconstruction_Processor:
 
             head_coeffs = copy.deepcopy(self.model.pred_coeffs_dict)
             for k, v in head_coeffs.items():
-                head_coeffs[k] = v.cpu().numpy()
+                if isinstance(v, torch.Tensor):
+                    head_coeffs[k] = v.cpu().numpy()
+                elif isinstance(v, np.ndarray):
+                    head_coeffs[k] = v
+                # else keep as is (e.g., lists)
 
             head_coeffs["bbx_orig"] = np.array(bbx_orig)
             head_coeffs["shape_orig"] = np.array([h_orig, w_orig])
@@ -100,9 +104,22 @@ class Deep3DFaceReconstruction_Processor:
     def align_img(self, img, lmk, return_bbx_orig=False, *args, **kwargs):
         H, W = img.shape[:2]
         lmk = copy.deepcopy(lmk)
-        lmk[:, -1] = H - 1 - lmk[:, -1]
+        lmk[:, -1] = H - 1 - lmk[:, -1]  # Flip Y to match expected coordinate system
         img = PIL.Image.fromarray(img)
-        _, img, lmk, _, bbx_orig = align_img(img, lmk, self.lm3d_std, return_bbx_orig=True, *args, **kwargs)
+        result = align_img(img, lmk, self.lm3d_std, return_bbx_orig=return_bbx_orig, *args, **kwargs)
+        if return_bbx_orig:
+            _, img, lmk, _, bbx_orig = result
+            # bbx_orig Y coordinates are in flipped space, convert back to standard image coordinates
+            # In flipped space: y_flipped = H - 1 - y_orig
+            # Inverse: y_orig = H - 1 - y_flipped
+            # For bbox [x_min, y_min, x_max, y_max], y_min and y_max swap when flipping
+            x_min, y_min_flipped, x_max, y_max_flipped = bbx_orig
+            y_min = H - 1 - y_max_flipped  # max in flipped becomes min in original
+            y_max = H - 1 - y_min_flipped  # min in flipped becomes max in original
+            bbx_orig = [x_min, y_min, x_max, y_max]
+        else:
+            _, img, lmk, _ = result
+            bbx_orig = None
         if img is not None:
             img = np.array(img)
         outs = [img, lmk]
@@ -119,18 +136,24 @@ class Deep3DFaceReconstruction_Processor:
 
     def crop_img(self, im: np.ndarray, lm: np.ndarray, blur_pad=False, return_bbx_orig=False):
         im = Image.fromarray(im, "RGB")
-        _, H = im.size
+        W, H = im.size
         lm = copy.deepcopy(lm)
-        lm[:, -1] = H - 1 - lm[:, -1]
+        lm[:, -1] = H - 1 - lm[:, -1]  # Flip Y to match expected coordinate system
 
         target_size = 1024
         rescale_factor = 300
         center_crop_size = 700
         output_size = 512
 
-        _, im_high, _, _, bbx_orig = align_img(im, lm, self.lm3d_std, target_size=target_size, rescale_factor=rescale_factor, blur_pad=blur_pad, return_bbx_orig=True)
+        _, im_high, _, _, bbx_orig_flipped = align_img(im, lm, self.lm3d_std, target_size=target_size, rescale_factor=rescale_factor, blur_pad=blur_pad, return_bbx_orig=True)
         if im_high is None:
             return None
+
+        # Convert bbx_orig from flipped Y coordinates back to standard image coordinates
+        x_min, y_min_flipped, x_max, y_max_flipped = bbx_orig_flipped
+        y_min = H - 1 - y_max_flipped
+        y_max = H - 1 - y_min_flipped
+        bbx_orig = [x_min, y_min, x_max, y_max]
 
         left = int(im_high.size[0] / 2 - center_crop_size / 2)
         upper = int(im_high.size[1] / 2 - center_crop_size / 2)
@@ -241,6 +264,9 @@ def annotate_dir(deep3dface, img_dir: Path, out_kp_dir: Path, out_bfm_dir: Path,
             head_coeffs = dict(id=None, exp=None, tex=None, angle=None, gamma=None, trans=None)
             lmks_68 = np.array([])
             P = np.array([])
+            pred_normal_orig = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
+            pred_verts = None
+            faces = None
         else:
             head_coeffs = deep3dface.get_head_coeffs(img, lmks)
             K = head_coeffs["facemodel_perc_proj"].T  # assuming x:right, y:down, z: view direction, image origin: top left; matches exported mesh
@@ -252,6 +278,50 @@ def annotate_dir(deep3dface, img_dir: Path, out_kp_dir: Path, out_bfm_dir: Path,
             lmks_68 = deep3dface.model.pred_lm[0].cpu().numpy() / np.array([[img.shape[1], img.shape[0]]])
             lmks_68[:, 1] = 1 - lmks_68[:, 1]
 
+            # Get normal map in cropped face space (rasterize_size x rasterize_size)
+            pred_normal_crop = (deep3dface.model.pred_normal * .5 + .5) * deep3dface.model.pred_mask
+            pred_normal_crop = np.clip(np.round(255. * pred_normal_crop.detach().cpu().permute(0, 2, 3, 1).numpy()[0]), a_min=0, a_max=255).astype(np.uint8)
+            
+            # Transform normal map back to original image space using bbx_orig
+            h_orig, w_orig = head_coeffs["shape_orig"]
+            bbx_orig = head_coeffs["bbx_orig"]
+            x_min, y_min, x_max, y_max = bbx_orig
+            
+            # Create output image in original image space
+            pred_normal_orig = np.zeros((int(h_orig), int(w_orig), 3), dtype=np.uint8)
+            
+            # Clip bounding box to image boundaries
+            x_min_clipped = max(0, int(round(x_min)))
+            y_min_clipped = max(0, int(round(y_min)))
+            x_max_clipped = min(int(w_orig), int(round(x_max)))
+            y_max_clipped = min(int(h_orig), int(round(y_max)))
+            
+            target_w = x_max_clipped - x_min_clipped
+            target_h = y_max_clipped - y_min_clipped
+            
+            if target_w > 0 and target_h > 0:
+                # Compute which part of the cropped normal to use (in case bbox extends beyond image)
+                crop_h, crop_w = pred_normal_crop.shape[:2]
+                # Ratio of clipped region within full bbox
+                src_x_start = int((x_min_clipped - x_min) / (x_max - x_min) * crop_w) if x_max != x_min else 0
+                src_y_start = int((y_min_clipped - y_min) / (y_max - y_min) * crop_h) if y_max != y_min else 0
+                src_x_end = int((x_max_clipped - x_min) / (x_max - x_min) * crop_w) if x_max != x_min else crop_w
+                src_y_end = int((y_max_clipped - y_min) / (y_max - y_min) * crop_h) if y_max != y_min else crop_h
+                
+                # Extract the relevant portion of the crop
+                pred_normal_portion = pred_normal_crop[src_y_start:src_y_end, src_x_start:src_x_end]
+                
+                if pred_normal_portion.size > 0:
+                    # Resize to target size in original image
+                    pred_normal_resized = cv2.resize(pred_normal_portion, (target_w, target_h), interpolation=cv2.INTER_LINEAR)
+                    pred_normal_orig[y_min_clipped:y_max_clipped, x_min_clipped:x_max_clipped] = pred_normal_resized
+            
+            # Get mesh data
+            pred_verts = deep3dface.model.pred_vertex[0].clone()
+            pred_verts[:, 1] *= -1  # converts camera convention from left-handed system used by eg3d/deep3dfacerecon (camera coordinates: x: right; y: top, z: in view direction)
+            # to right-handed coordinate system: (camera coordinates: x: right, y:down, z: in view direction); matches 'K' in exported bfm parameters
+            faces = deep3dface.model.facemodel.face_buf
+
             for k, v in head_coeffs.items():
                 head_coeffs[k] = v.tolist()
 
@@ -261,23 +331,16 @@ def annotate_dir(deep3dface, img_dir: Path, out_kp_dir: Path, out_bfm_dir: Path,
         out_mesh_file = out_mesh_dir / (img_path.name.split(".")[0] + ".obj")
         out_cam_file = out_cam_dir / (img_path.name.split(".")[0] + ".txt")
 
-        pred_normal = (deep3dface.model.pred_normal * .5 + .5) * deep3dface.model.pred_mask
-        pred_normal = np.clip(np.round(255. * pred_normal.detach().cpu().permute(0, 2, 3, 1).numpy()[0]), a_min=0, a_max=255).astype(np.uint8)
-
         np.savetxt(out_kp_file, np.array(lmks_68))
 
         with open(out_bfm_file, "w") as f:
             json.dump(head_coeffs, f, indent="\t")
 
-        Image.fromarray(pred_normal).save(out_normal_file)
+        Image.fromarray(pred_normal_orig).save(out_normal_file)
 
         # saving mesh
-        pred_verts = deep3dface.model.pred_vertex[0]
-
-        pred_verts[:, 1] *= -1  # converts camera convention from left-handed system used by eg3d/deep3dfacerecon (camera coordinates: x: right; y: top, z: in view direction)
-        # to right-handed coordinate system: (camera coordinates: x: right, y:down, z: in view direction); matches 'K' in exported bfm parameters
-        faces = deep3dface.model.facemodel.face_buf
-        save_obj(out_mesh_file, pred_verts, faces)
+        if pred_verts is not None and faces is not None:
+            save_obj(out_mesh_file, pred_verts, faces)
         np.savetxt(out_cam_file, P)
 
 

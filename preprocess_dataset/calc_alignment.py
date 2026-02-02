@@ -55,7 +55,7 @@ def main(args, device="cuda"):
 
 
     # Face alignment setup
-    fa = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D, flip_input=False)
+    fa = face_alignment.FaceAlignment(face_alignment.LandmarksType.TWO_D, flip_input=False)
 
     # Load ground-truth target landmarks
     img_gt = Image.open(gt_img_path).resize((512, 512))

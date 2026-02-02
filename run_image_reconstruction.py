@@ -54,6 +54,7 @@ torch.backends.cudnn.benchmark = False
 
 from trainers.trainer_single import BaseTrainer
 import trimesh
+import shutil
 
              
 
@@ -165,12 +166,9 @@ def main(args, dataset, opt,  pipe, pointcloud_path_head,  ip=None, port=None):
     world_size = dist.get_world_size()
     print(f'Starting in machine {device} which is at rank {global_rank} of world size {world_size} and rank {rank}')
     dist.print0(f'\n\nDistributing across {world_size} GPUs\n\n')
-       
+
     training = PriorTrainer(conf, world_size, rank, device, global_rank, ckpt_path=args.ckpt_path, savedir=args.savedir,    unfreeze_time_for_pca=args.unfreeze_time_for_pca, ngpus=args.ngpus, num_workers=args.num_workers, accumulate_gradients=args.accumulate_gradients, dataset=dataset, opt=opt,  pipe=pipe,  pointcloud_path_head=pointcloud_path_head, ip=ip, port=port, folder_name=args.folder_name, scene=args.scene, upsample_hairstyle=args.upsample_hairstyle,  upsample_resolution=args.upsample_resolution, optimize_appearance=args.optimize_appearance, num_steps_coarse=args.num_steps_coarse)
 
-    
-                
-                
     training.train(world_size,  rank, device, global_rank)
 
     dist.cleanup()
@@ -205,12 +203,28 @@ if __name__ == "__main__":
     args, _ = parser.parse_known_args()
     args = parser.parse_args()
     
+    pred_path = os.path.join(args.savedir, "pred_000300.ply")
+    for root, _, files in os.walk(args.savedir):
+        if "pred_000300.ply" in files:
+            pred_path = os.path.join(root, "pred_000300.ply")
+            break
+    if os.path.exists(pred_path):
+        print("skip already done sample")
+        raise SystemExit
     # Initialize system state (RNG)
     safe_state(args.quiet)
 
 
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
     
+    
 
     main(args, lp.extract(args), op.extract(args),  pp.extract(args), args.pointcloud_path_head, args.ip, args.port)
+    
+    for root, dirs, _ in os.walk(args.savedir):
+        for d in dirs:
+            if d in ("recording", "checkpoints", "checkpoint"):
+                shutil.rmtree(os.path.join(root, d), ignore_errors=True)
+                
+
  

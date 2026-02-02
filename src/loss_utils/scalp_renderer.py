@@ -7,7 +7,6 @@ import yaml
 import matplotlib.pyplot as plt
 from PIL import Image
 import os
-from tqdm import tqdm
 import pickle
 import torch
 import cv2
@@ -35,7 +34,6 @@ import torch
 import numpy as np
 import trimesh
 from pathlib import Path
-from tqdm import tqdm
 from pyhocon import ConfigFactory
 from PIL import Image
 import cv2
@@ -130,7 +128,7 @@ def check_visiblity_of_faces(cams, meshRasterizer, full_mesh, mesh_head, n_views
         face_idx: Indices of visible faces relative to the head mesh.
     """
     vis_maps = []
-    for cam in tqdm(range(len(cams))):
+    for cam in range(len(cams)):
         v, _, pix_to_face = create_visibility_map(cams[cam], meshRasterizer, full_mesh, hair_mask=hair_mask)
         vis_maps.append(v)
 

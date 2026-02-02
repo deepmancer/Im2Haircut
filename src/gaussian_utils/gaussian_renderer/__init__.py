@@ -257,8 +257,8 @@ def render_hair(viewpoint_camera, pc : GaussianModel, pc_hair: GaussianModelCurv
                 default_dir.expand_as(rendered_cov2D[:2])
             )
 
-            angle_radians = torch.atan2(rendered_dir2D[1], rendered_dir2D[0])
-            rendered_orient_angle = (angle_radians + math.pi) / (2 * math.pi)
+            angle_radians = torch.atan2(rendered_dir2D[[1]], rendered_dir2D[[0]])  # Use [[idx]] to keep channel dim
+            rendered_orient_angle = (angle_radians + math.pi) / (2 * math.pi)  # [1, H, W]
         else:
             rendered_dir2D = F.normalize(rendered_cov2D[:2], dim=0)
             to_mirror = torch.ones_like(rendered_dir2D[[0]])
